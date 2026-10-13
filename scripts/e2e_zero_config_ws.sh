@@ -794,17 +794,47 @@ else
     fail "observe_jobs tail skipped: no JOB_ID available"
 fi
 
-# Low-frequency project file inventory remains gateway-only. Job identity
-# recovery is now an explicitly selected Adaptive Direct CoreWorkflow tool.
-if mcp_tool_present "list_project_files"; then
-    fail "Adaptive Runtime must keep list_project_files behind call_runtime_tool"
-else
-    pass "Adaptive Runtime keeps list_project_files behind the gateway"
+# Low-frequency inventory tools stay behind call_runtime_tool rather than
+# consuming direct Adaptive surface slots. list_jobs is deliberately excluded:
+# v0.5 promotes it to an Adaptive Runtime direct tool, and its direct contract
+# is asserted below.
+phase_a_present=1
+for tname in list_project_files; do
+    if mcp_tool_present "$tname"; then
+        phase_a_present=0
+        fail "MCP tools/list must keep $tname behind call_runtime_tool"
+    fi
+done
+if [ "$phase_a_present" = "1" ]; then
+    pass "Adaptive Runtime keeps low-frequency inventory tools behind the gateway"
 fi
+
+# list_jobs direct contract: served in tools/list, callable directly with a
+# bounded limit filter, still dispatched through the call_runtime_tool gateway,
+# and both paths return summaries without Job stdout/stderr bodies.
 if mcp_tool_present "list_jobs"; then
-    pass "Adaptive Runtime exposes canonical direct list_jobs for Job identity recovery"
+    pass "MCP tools/list serves list_jobs as an Adaptive direct tool"
 else
-    fail "Adaptive Runtime must expose direct list_jobs for Job identity recovery"
+    adaptive_present=0
+    fail "MCP tools/list must serve direct tool list_jobs"
+fi
+lj_direct_body="$(api_post /mcp '{"jsonrpc":"2.0","id":90,"method":"tools/call","params":{"name":"list_jobs","arguments":{"limit":5}}}')"
+lj_direct_sc="$(json_get "$lj_direct_body" result.structuredContent)"
+if [ "$(json_get "$lj_direct_sc" success)" = "True" ]; then
+    pass "MCP tools/call(list_jobs) direct call returns bounded success"
+else
+    fail "MCP tools/call(list_jobs) direct call failed (body: ${lj_direct_body:0:300})"
+fi
+if echo "$lj_direct_sc" | grep -qi "stdout_tail\|stderr_tail\|stdout\|stderr"; then
+    fail "direct list_jobs summaries leaked stdout/stderr (got: ${lj_direct_sc:0:200})"
+else
+    pass "direct list_jobs summaries omit stdout/stderr bodies"
+fi
+lj_gateway_body="$(runtime_tool_call "list_jobs" '{"limit":5}')"
+if [ "$(json_get "$lj_gateway_body" success)" = "True" ]; then
+    pass "call_runtime_tool(list_jobs) still dispatches the direct-admitted tool"
+else
+    fail "call_runtime_tool(list_jobs) failed (body: ${lj_gateway_body:0:300})"
 fi
 
 # ----------------------------------------------------------------------------
@@ -1193,7 +1223,7 @@ if output.get("session_id") != session_id:
     errors.append("output.session_id must match returned session_id")
 if not isinstance(output.get("workspace"), dict):
     errors.append("output.workspace must exist")
-if not isinstance(changes.get("show_changes"), dict):
+if not isinstance(changes.get("read_workspace_changes"), dict):
     errors.append("output.changes.show_changes must exist")
 if not isinstance(output.get("hygiene"), dict):
     errors.append("output.hygiene must exist")

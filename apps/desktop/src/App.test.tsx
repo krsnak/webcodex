@@ -1040,12 +1040,16 @@ beforeEach(() => {
         next_action_kind: "start_runner",
       },
     };
-    api.getState.mockResolvedValueOnce(stoppedState).mockResolvedValue(readyState);
-    api.resumeSavedRuntime.mockRejectedValue({
+    const runnerError = {
       code: "runner_offline",
       message: "Runner did not become connected",
       next_action: "Retry setup.",
-    });
+    };
+    // Native startup errors survive in runtime_error even when a later
+    // getState observes the Runner ready before RuntimeRefresh settles.
+    api.getState.mockResolvedValueOnce({ ...stoppedState, runtime_error: runnerError })
+      .mockResolvedValue({ ...readyState, runtime_error: runnerError });
+    api.resumeSavedRuntime.mockRejectedValue(runnerError);
 
     renderApp();
     const submit = await screen.findByRole("button", { name: "启动 WebCodex" });

@@ -75,6 +75,7 @@ export function useDesktopWorkspace() {
   const commitState = useCallback((next: DesktopState) => {
     stateVersionRef.current += 1;
     setState(next);
+    setError((current) => current?.code === "runner_offline" && next.readiness.runner === "ready" ? null : current);
   }, []);
 
   const observeFailedOperation = useCallback(async (value: unknown, current: () => boolean = () => true) => {

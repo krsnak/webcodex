@@ -74,7 +74,8 @@ def _read_bounded_json(path: Path) -> object:
         raise ReportError("input JSON exceeds bounded size")
     try:
         return json.loads(raw.decode("utf-8"))
-    except (UnicodeError, ValueError) as exc:
+    except (UnicodeError, ValueError, RecursionError) as exc:
+        # Deeply nested JSON can exhaust the parser stack below the byte cap.
         raise ReportError("invalid input JSON") from exc
 
 

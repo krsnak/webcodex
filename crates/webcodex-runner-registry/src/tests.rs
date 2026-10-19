@@ -332,6 +332,8 @@ mod computer_text_input;
 mod connection_lease;
 #[path = "tests/disconnect_reconciliation.rs"]
 mod disconnect_reconciliation;
+#[path = "tests/execution_admission.rs"]
+mod execution_admission;
 #[path = "tests/file_validation.rs"]
 mod file_validation;
 #[path = "tests/instance_lease.rs"]
@@ -362,6 +364,8 @@ mod project_build;
 mod project_dependency_policy;
 #[path = "tests/project_file_read.rs"]
 mod project_file_read;
+#[path = "tests/project_format.rs"]
+mod project_format;
 #[path = "tests/project_inventory.rs"]
 mod project_inventory;
 #[path = "tests/project_projection.rs"]

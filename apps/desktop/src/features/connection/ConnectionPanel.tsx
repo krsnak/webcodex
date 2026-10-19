@@ -93,7 +93,7 @@ export function ConnectionPanel({ state, onState, onSettings }: {
   };
   return <section className="page-section workspace-page" aria-labelledby="connection-title" data-webcodex-page="connection">
     <header className="page-heading-row"><h1 id="connection-title">{c("connections")}</h1><button type="button" className="primary-button" disabled={disabled || profiles.config_error || !canManageConnections} onClick={() => { setSaved(false); setEditor({ profile: null }); }}>{c("addConnection")}</button></header>
-    <div className="connection-context"><span>{presentation.connectionText}</span><span>{c("networkRoute")} · <strong>{route}</strong></span><button type="button" className="text-button" onClick={() => onSettings("network")}>{c("proxySettings")}</button></div>
+    <div className="connection-context"><span>{presentation.connectionText}</span><div className="connection-route"><span>{c("networkRoute")}</span><strong>{route}</strong></div><button type="button" className="text-button" onClick={() => onSettings("network")}>{c("proxySettings")}</button></div>
     {state.topology?.server.kind === "remote" && <p className="workspace-notice"><code>{state.topology.server.url}</code></p>}
     {presentation.externalConnectionUnobserved && <p className="workspace-notice">{c("externalConnectionUnobserved")}</p>}
     {local && !state.readiness.runtime_ready && <div className="workspace-notice"><p>{c("localRuntimeNeeded")}</p><button type="button" className="secondary-button" onClick={() => onSettings("runtime")}>{s("Runtime")}</button></div>}
@@ -113,7 +113,7 @@ export function ConnectionPanel({ state, onState, onSettings }: {
     {deleting && <WorkspaceDialog title={c("delete") + " " + deleting.name} onClose={() => setDeleting(null)} busy={busyId !== null}>
       <p>{deleting.host_mode === "embedded" ? c("deleteServerOwnedHelp") : c("deleteConnectionHelp")}</p>
       {failed && <p role="alert" className="workspace-notice">{c("operationFailed")}</p>}
-      <div className="connection-actions"><button type="button" className="primary-button" disabled={disabled} onClick={() => void run(deleting.id, "delete", deleting.provider && deleting.provider.kind !== "openai" ? deleting.revision : undefined, deleting.configuration_id)}>{c("delete")}</button><button type="button" className="secondary-button" disabled={disabled} onClick={() => setDeleting(null)}>{p("cancel")}</button></div>
+      <div className="connection-actions"><button type="button" className="danger-button" disabled={disabled} onClick={() => void run(deleting.id, "delete", deleting.provider && deleting.provider.kind !== "openai" ? deleting.revision : undefined, deleting.configuration_id)}>{c("delete")}</button><button type="button" className="secondary-button" disabled={disabled} onClick={() => setDeleting(null)}>{p("cancel")}</button></div>
     </WorkspaceDialog>}
   </section>;
 }

@@ -60,6 +60,7 @@ fn locked_validation_request() -> ProjectValidationRequest {
         adapter: ProjectValidationAdapter::Rust,
         scope: None,
         dependency_policy: Some(locked_policy()),
+        dependency_resolution_policy: None,
         test: None,
     }
 }
@@ -303,6 +304,7 @@ async fn project_validation_optional_capability_errors_identify_runner_without_d
                 action: ProjectValidationAction::Check,
                 adapter: ProjectValidationAdapter::Python,
                 dependency_policy: None,
+                dependency_resolution_policy: None,
                 ..locked_validation_request()
             },
         ),
@@ -312,6 +314,7 @@ async fn project_validation_optional_capability_errors_identify_runner_without_d
                 action: ProjectValidationAction::FormatCheck,
                 adapter: ProjectValidationAdapter::Python,
                 dependency_policy: None,
+                dependency_resolution_policy: None,
                 ..locked_validation_request()
             },
         ),
@@ -321,6 +324,7 @@ async fn project_validation_optional_capability_errors_identify_runner_without_d
                 action: ProjectValidationAction::Test,
                 adapter: ProjectValidationAdapter::Python,
                 dependency_policy: None,
+                dependency_resolution_policy: None,
                 ..locked_validation_request()
             },
         ),
@@ -332,6 +336,7 @@ async fn project_validation_optional_capability_errors_identify_runner_without_d
                     all_packages: true,
                 }),
                 dependency_policy: None,
+                dependency_resolution_policy: None,
                 ..locked_validation_request()
             },
         ),
@@ -345,6 +350,7 @@ async fn project_validation_optional_capability_errors_identify_runner_without_d
                 action: ProjectValidationAction::Test,
                 test: Some(ProjectValidationTestOptions::default()),
                 dependency_policy: None,
+                dependency_resolution_policy: None,
                 ..locked_validation_request()
             },
         ),
@@ -356,6 +362,7 @@ async fn project_validation_optional_capability_errors_identify_runner_without_d
                     all_packages: false,
                 }),
                 dependency_policy: None,
+                dependency_resolution_policy: None,
                 ..locked_validation_request()
             },
         ),
@@ -557,6 +564,7 @@ async fn project_validation_python_preplan_selects_capability_by_action() {
                         action,
                         adapter: ProjectValidationAdapter::Python,
                         dependency_policy: None,
+                        dependency_resolution_policy: None,
                         ..locked_validation_request()
                     },
                     Some(&auth_context(None, true)),

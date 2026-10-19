@@ -12,6 +12,8 @@ pub use crate::project_operation::{
 pub enum ProjectValidationAction {
     FormatCheck,
     Check,
+    /// Run only a Runner-selected Node `lint` script; never fall back to check/typecheck.
+    Lint,
     Test,
 }
 impl ProjectValidationAction {
@@ -19,6 +21,7 @@ impl ProjectValidationAction {
         match self {
             Self::FormatCheck => "format",
             Self::Check => "check",
+            Self::Lint => "check",
             Self::Test => "test",
         }
     }

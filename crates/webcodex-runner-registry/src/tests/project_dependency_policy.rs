@@ -4,9 +4,9 @@ use webcodex_core::project_build::{
     ProjectBuildPlan, ProjectBuildProvenance, ProjectBuildRequest,
 };
 use webcodex_core::project_validation::{
-    ProjectDependencyMode, ProjectDependencyPolicy, ProjectValidationAction,
-    ProjectValidationAdapter, ProjectValidationProvenance, ProjectValidationRequest,
-    ProjectValidationScope, ProjectValidationTestOptions,
+    ProjectDependencyMode, ProjectDependencyPolicy, ProjectDependencyResolutionPolicy,
+    ProjectValidationAction, ProjectValidationAdapter, ProjectValidationProvenance,
+    ProjectValidationRequest, ProjectValidationScope, ProjectValidationTestOptions,
 };
 use webcodex_core::runner_protocol::RunnerCapabilityId;
 
@@ -345,6 +345,14 @@ async fn project_validation_optional_capability_errors_identify_runner_without_d
             locked_validation_request(),
         ),
         (
+            RunnerCapabilityId::ProjectDependencyResolutionOffline,
+            ProjectValidationRequest {
+                dependency_policy: None,
+                dependency_resolution_policy: Some(ProjectDependencyResolutionPolicy::Offline),
+                ..locked_validation_request()
+            },
+        ),
+        (
             RunnerCapabilityId::ProjectValidationTestOptions,
             ProjectValidationRequest {
                 action: ProjectValidationAction::Test,
@@ -529,6 +537,50 @@ async fn dependency_policy_is_fenced_again_at_project_validation_job_admission()
             assert!(error.contains("Runner `policy-runner`"), "{error}");
             assert!(error.contains("project_dependency_policy_v1"), "{error}");
             assert!(error.contains("upgrade that Runner"), "{error}");
+            assert!(registry.list_jobs(Some(10)).await.is_empty());
+        }
+    }
+}
+
+#[tokio::test]
+async fn offline_dependency_resolution_capability_is_rechecked_at_job_admission() {
+    for supported in [false, true] {
+        let registry = RunnerRegistry::default();
+        let mut runner = registration(true);
+        runner.capabilities.project_dependency_resolution_offline_v1 = supported;
+        registry.register(runner).await.unwrap();
+        let mut metadata = locked_validation_metadata();
+        let validation = metadata.validation.as_mut().unwrap();
+        let provenance = validation.project_validation.as_mut().unwrap();
+        provenance.request.dependency_policy = None;
+        provenance.request.dependency_resolution_policy =
+            Some(ProjectDependencyResolutionPolicy::Offline);
+        let step = ShellJobValidationStep {
+            name: "check".into(),
+            program: "cargo".into(),
+            args: vec!["check".into(), "--offline".into(), "--all-targets".into()],
+            env: Vec::new(),
+        };
+        validation.steps = vec![step.clone()];
+        metadata.validation_steps = vec![step];
+        assert!(validation.is_valid());
+        let result = registry
+            .start_job_with_metadata_for_access(
+                start_request("cargo check --offline --all-targets"),
+                "test".into(),
+                metadata,
+                None,
+                None,
+            )
+            .await;
+        if supported {
+            assert!(result.is_ok(), "{result:?}");
+        } else {
+            let error = result.unwrap_err();
+            assert!(
+                error.contains("project_dependency_resolution_offline_v1"),
+                "{error}"
+            );
             assert!(registry.list_jobs(Some(10)).await.is_empty());
         }
     }

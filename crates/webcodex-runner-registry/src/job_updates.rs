@@ -1997,7 +1997,8 @@ impl RunnerRegistry {
             )?;
             enqueue_pending_request_locked(
                 self.telemetry.as_ref(),
-                &mut inner,                &job.client_id,
+                &mut inner,
+                &job.client_id,
                 stop_request_id,
                 request,
                 None,

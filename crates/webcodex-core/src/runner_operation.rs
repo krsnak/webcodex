@@ -1997,7 +1997,8 @@ fn decode_job_operation(wire: &RunnerRequest) -> Result<RunnerJobOperation, Stri
                     "Skill resource Job recovery metadata does not match typed operation"
                         .to_string(),
                 );
-            }            Ok(job)
+            }
+            Ok(job)
         }
         _ => unreachable!("decode_job_operation called for non-job kind"),
     }

@@ -1997,7 +1997,8 @@ impl RunnerRegistry {
                 .provider_binding()
                 .map(|(provider_id, provider_instance_id)| {
                     (provider_id.to_string(), provider_instance_id.to_string())
-                });        let request_id = next_request_id();
+                });
+        let request_id = next_request_id();
         let (tx, rx) = oneshot::channel();
         let request = encode_runner_operation(
             &request_id,

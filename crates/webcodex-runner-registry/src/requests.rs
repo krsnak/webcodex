@@ -1997,8 +1997,7 @@ impl RunnerRegistry {
                 .provider_binding()
                 .map(|(provider_id, provider_instance_id)| {
                     (provider_id.to_string(), provider_instance_id.to_string())
-                });
-        let request_id = next_request_id();
+                });        let request_id = next_request_id();
         let (tx, rx) = oneshot::channel();
         let request = encode_runner_operation(
             &request_id,
@@ -2686,6 +2685,7 @@ impl RunnerRegistry {
             .as_ref()
             .is_some_and(webcodex_core::project_build::ProjectBuildScope::selects_all_packages);
         let requires_dependency_policy = payload.dependency_policy.is_some();
+        let requires_resolution_offline = payload.dependency_resolution_policy.is_some();
         let requires_python =
             payload.adapter == webcodex_core::project_build::ProjectBuildAdapter::Python;
         let request_id = next_request_id();
@@ -2709,6 +2709,8 @@ impl RunnerRegistry {
                 requires_python.then_some(RunnerFeature::ProjectBuildPython),
                 requires_all_packages.then_some(RunnerFeature::ProjectAllPackages),
                 requires_dependency_policy.then_some(RunnerFeature::ProjectDependencyPolicy),
+                requires_resolution_offline
+                    .then_some(RunnerFeature::ProjectDependencyResolutionOffline),
             ],
         )?;
         enqueue_pending_request_locked(

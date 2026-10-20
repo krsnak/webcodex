@@ -2321,17 +2321,17 @@ fn mcp_compact_descriptions_preserve_selection_and_schema_literals() {
         (
             "project_build",
             vec![
-                "Rust/Go/Python/Node builds",
-                "fixed argv, no installs",
-                "Python: pyproject.toml, configured interpreter -m build --no-isolation; rejects scope",
-                "Artifacts are observations, not correctness/freshness proof",
-                "declared npm/pnpm/yarn/bun build",
+                "Build Rust/Go/Python/Node via Runner argv",
                 "no installs",
-                "Node: declared npm/pnpm/yarn/bun build; rejects scope/policy",
-                "scripts may write/use network",
+                "Rust/Go: packages/all_packages, locked",
+                "Rust dependency_resolution_policy=offline adds Cargo --offline",
+                "not OS sandbox",
+                "others reject",
+                "Python: pyproject.toml, -m build --no-isolation; no scope",
+                "Node: declared script; no scope/policy; hooks may write/network",
+                "Artifacts don't prove correctness",
                 "same durable Job",
-                "never retry or redispatch",
-                "observe_jobs",
+                "observe_jobs, never retry/redispatch",
             ],
         ),
         (
@@ -2410,7 +2410,7 @@ fn mcp_compact_descriptions_preserve_selection_and_schema_literals() {
         };
         let description = descriptor["description"].as_str().unwrap();
         if name == "project_build" {
-            assert_eq!(description, "Rust/Go/Python/Node builds; fixed argv, no installs. Rust/Go: packages/all_packages, locked. Python: pyproject.toml, configured interpreter -m build --no-isolation; rejects scope. Node: declared npm/pnpm/yarn/bun build; rejects scope/policy; scripts may write/use network. Artifacts are observations, not correctness/freshness proof. Pending: same durable Job/continuation, never retry or redispatch; observe_jobs.");
+            assert_eq!(description, "Build Rust/Go/Python/Node via Runner argv; no installs. Rust/Go: packages/all_packages, locked. Rust dependency_resolution_policy=offline adds Cargo --offline (not OS sandbox); others reject. Python: pyproject.toml, -m build --no-isolation; no scope. Node: declared script; no scope/policy; hooks may write/network. Artifacts don't prove correctness. Pending: same durable Job; observe_jobs, never retry/redispatch.");
             assert!(!description.contains("artifact contract"));
         }
         for phrase in phrases {

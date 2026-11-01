@@ -271,6 +271,119 @@ async fn unfinished_mutation_survives_sqlite_reload_and_new_attempt() {
 }
 
 #[test]
+fn unfinished_mutation_without_explicit_project_still_blocks_continuation() {
+    let store = store(200);
+    let session = create_session(&store, "implicit project");
+    add_instruction(&store, &session, "write using session project");
+    let started = store.record_tool_call_started(
+        Some(&session),
+        SessionTransport::Api,
+        "synthetic_write",
+        &json!({"paths": ["src/implicit.rs"]}),
+        synthetic_contract(false, true, SessionPathHint::PathList),
+    );
+    let unconfirmed = feedback_for(&store, &session);
+    assert_eq!(unconfirmed["attempt"]["outcome"]["status"], "blocked");
+    assert!(unconfirmed["attempt"]["outcome"]["reason_codes"]
+        .as_array()
+        .unwrap()
+        .contains(&json!("unconfirmed_tool_execution")));
+    store.record_tool_call_finished(started, true, &json!({"applied": true}), None, None);
+    assert!(
+        !feedback_for(&store, &session)["attempt"]["outcome"]["reason_codes"]
+            .as_array()
+            .unwrap()
+            .contains(&json!("unconfirmed_tool_execution"))
+    );
+}
+
+#[test]
+fn unfinished_mutation_on_different_project_still_blocks_owning_session() {
+    let store = store(200);
+    let session = create_session(&store, "other project");
+    add_instruction(&store, &session, "record external project invocation");
+    let started = store.record_tool_call_started_with_metadata(
+        Some(&session),
+        SessionTransport::Api,
+        "synthetic_write",
+        &json!({"project": "other-project", "paths": ["src/other.rs"]}),
+        Some("other-project".into()),
+        ToolCallRecorderMetadata::default(),
+        synthetic_contract(false, true, SessionPathHint::PathList),
+    );
+    let unconfirmed = feedback_for(&store, &session);
+    assert_eq!(unconfirmed["attempt"]["outcome"]["status"], "blocked");
+    assert!(unconfirmed["attempt"]["outcome"]["reason_codes"]
+        .as_array()
+        .unwrap()
+        .contains(&json!("unconfirmed_tool_execution")));
+    store.record_tool_call_finished(started, true, &json!({"applied": true}), None, None);
+    assert!(
+        !feedback_for(&store, &session)["attempt"]["outcome"]["reason_codes"]
+            .as_array()
+            .unwrap()
+            .contains(&json!("unconfirmed_tool_execution"))
+    );
+}
+
+#[test]
+fn unfinished_shell_call_without_explicit_project_is_unconfirmed() {
+    let store = store(200);
+    let session = create_session(&store, "implicit shell");
+    add_instruction(&store, &session, "run shell in default project");
+    let mut contract = synthetic_contract(false, false, SessionPathHint::None);
+    contract.shell_like = true;
+    let started = store.record_tool_call_started(
+        Some(&session),
+        SessionTransport::Api,
+        "synthetic_shell",
+        &json!({"command": "echo test"}),
+        contract,
+    );
+    assert!(
+        feedback_for(&store, &session)["attempt"]["outcome"]["reason_codes"]
+            .as_array()
+            .unwrap()
+            .contains(&json!("unconfirmed_tool_execution"))
+    );
+    store.record_tool_call_finished(started, true, &json!({"exit_code": 0}), None, None);
+    assert!(
+        !feedback_for(&store, &session)["attempt"]["outcome"]["reason_codes"]
+            .as_array()
+            .unwrap()
+            .contains(&json!("unconfirmed_tool_execution"))
+    );
+}
+
+#[test]
+fn unfinished_mutation_in_unbound_session_does_not_disappear() {
+    let store = store(200);
+    let session = store
+        .start_session(None, Some("unbound session".to_string()))
+        .session_id;
+    let started = store.record_tool_call_started(
+        Some(&session),
+        SessionTransport::Api,
+        "synthetic_write",
+        &json!({"project": PROJECT, "paths": ["src/unbound.rs"]}),
+        synthetic_contract(false, true, SessionPathHint::PathList),
+    );
+    assert!(
+        feedback_for(&store, &session)["attempt"]["outcome"]["reason_codes"]
+            .as_array()
+            .unwrap()
+            .contains(&json!("unconfirmed_tool_execution"))
+    );
+    store.record_tool_call_finished(started, true, &json!({"applied": true}), None, None);
+    assert!(
+        !feedback_for(&store, &session)["attempt"]["outcome"]["reason_codes"]
+            .as_array()
+            .unwrap()
+            .contains(&json!("unconfirmed_tool_execution"))
+    );
+}
+
+#[test]
 fn unfinished_mutation_requires_exact_call_and_logical_invocation_identity() {
     let store = store(200);
     let session = create_session(&store, "exact invocation");
@@ -307,6 +420,22 @@ fn unfinished_mutation_requires_exact_call_and_logical_invocation_identity() {
     wrong_call.call_id.push_str("_different");
     store.record_tool_call_finished(
         Some(wrong_call),
+        true,
+        &json!({"applied": true}),
+        None,
+        None,
+    );
+    assert!(
+        feedback_for(&store, &session)["attempt"]["outcome"]["reason_codes"]
+            .as_array()
+            .unwrap()
+            .contains(&json!("unconfirmed_tool_execution"))
+    );
+
+    let mut wrong_project = start.clone().unwrap();
+    wrong_project.resolved_project = Some("different-project".to_string());
+    store.record_tool_call_finished(
+        Some(wrong_project),
         true,
         &json!({"applied": true}),
         None,

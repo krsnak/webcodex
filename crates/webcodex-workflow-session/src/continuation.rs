@@ -637,21 +637,21 @@ fn empty_attempt() -> AttemptSummary {
 /// its subsequent running/recovering state belongs to the Job lifecycle,
 /// not to this unfinished-call check. Never correlate by wall time or args.
 fn has_unconfirmed_mutating_call(summary: &SessionSummary) -> bool {
-    let Some(project) = summary.project.as_deref() else {
-        return false;
-    };
     summary.events.iter().enumerate().any(|(index, start)| {
         if start.kind != "tool_call_started"
             || !(start.write_like || start.shell_like)
             || start.session_id != summary.session_id
-            || start
-                .resolved_project
-                .as_deref()
-                .or(start.project.as_deref())
-                != Some(project)
         {
             return false;
         }
+        // A Session can record implicitly scoped calls and requests for a
+        // different Project (including rejected requests). Neither case is
+        // proof that the recorded start finished. Compare the start's own
+        // Project identity with the finish, not with the Session default.
+        let project = start
+            .resolved_project
+            .as_deref()
+            .or(start.project.as_deref());
         let Some(call_id) = start.call_id.as_deref().filter(|id| !id.is_empty()) else {
             // Legacy starts cannot be proven to have a matching finish.
             return true;
@@ -666,7 +666,7 @@ fn has_unconfirmed_mutating_call(summary: &SessionSummary) -> bool {
                         .resolved_project
                         .as_deref()
                         .or(finish.project.as_deref())
-                        == Some(project)
+                        == project
                     && finish.tool_name == start.tool_name
                     && finish.call_id.as_deref() == Some(call_id)
                     && finish.logical_invocation_id == start.logical_invocation_id
